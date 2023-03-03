@@ -1,17 +1,17 @@
 import * as streams from 'stream';
-import type { bytes } from './@types/basic';
-import type { IHandshake } from './@types/handshake-interface';
-import type { KeyPair } from './@types/keypair';
-import type { ICryptoInterface } from './crypto';
-import { stablelib } from './crypto/stablelib';
-import { decryptStream, encryptStream } from './crypto/streaming';
-import { XXHandshake } from './handshake-xx';
-import type { Metrics } from './@types/metrics';
-import { MetricsRegistry, registerMetrics } from './metrics';
-import {PbStream} from './pb-stream';
 import duplexify from 'duplexify';
+import type {bytes} from './@types/basic';
+import type {IHandshake, HandshakeHandler} from './@types/handshake-interface';
+import type {KeyPair} from './@types/keypair';
+import type {ICryptoInterface} from './crypto';
+import type {Metrics} from './@types/metrics';
+import {stablelib} from './crypto/stablelib';
+import {decryptStream, encryptStream} from './crypto/streaming';
+import {MetricsRegistry, registerMetrics} from './metrics';
+import {PbStream} from './pb-stream';
 import {LengthPrefixedDecoder} from './length-prefixed-decoder';
-import {HandshakeHandler} from './@types/handshake-interface';
+import {PatternHandshake, PATTERNS} from './handshakes/pattern';
+import {Handshake} from './handshake';
 
 const EMPTY_BUFFER = new Uint8Array(0);
 
@@ -30,6 +30,8 @@ export interface SecuredConnection {
 
 
 export interface NoiseInit {
+  protocol?: string
+
   /**
    * x25519 private key, reuse for faster handshakes
    */
@@ -39,6 +41,26 @@ export interface NoiseInit {
   metrics?: Metrics
 }
 
+interface NoiseProtocolSpec {
+  pattern: string;
+  dh: string;
+  cipher: string;
+  hash: string;
+}
+
+function parseSpec(name: string): NoiseProtocolSpec | null {
+  const m = name.split('_');
+  if (m.length != 5) {
+    return null;
+  }
+  return {
+    pattern: m[1],
+    dh: m[2],
+    cipher: m[3],
+    hash: m[4]
+  };
+}
+
 export class Noise {
   public readonly crypto: ICryptoInterface
 
@@ -46,11 +68,38 @@ export class Noise {
   private readonly staticKeys: KeyPair
   private readonly metrics?: MetricsRegistry
 
+  private readonly spec: NoiseProtocolSpec;
+  private readonly handshake: PatternHandshake;
+
   constructor (init: NoiseInit = {}) {
+    const name = init.protocol || 'Noise_XX_25519_ChaChaPoly_SHA256';
     const { staticNoiseKey, crypto, prologueBytes, metrics } = init;
 
     this.crypto = crypto ?? stablelib;
     this.metrics = metrics ? registerMetrics(metrics) : undefined;
+
+    const spec = parseSpec(name);
+    if (!spec) {
+      throw new Error('invalid protocol name');
+    }
+
+    if (spec.dh !== '25519') {
+      throw new Error(`not supported dh: ${spec.dh}`);
+    }
+    if (spec.cipher !== 'ChaChaPoly') {
+      throw new Error(`not supported cipher: ${spec.cipher}`);
+    }
+    if (spec.hash !== 'SHA256') {
+      throw new Error(`not supported hash: ${spec.hash}`);
+    }
+
+    const pattern = PATTERNS[spec.pattern];
+    if (!pattern) {
+      throw new Error(`not supported pattern: ${spec.pattern}`);
+    }
+
+    this.spec = spec;
+    this.handshake = new PatternHandshake(this.crypto, name, pattern);
 
     if (staticNoiseKey) {
       // accepts x25519 private key of length 32
@@ -130,35 +179,18 @@ export class Noise {
    * @param {HandshakeParams} params
    */
   private async performHandshake (params: HandshakeParams): Promise<IHandshake> {
-    return await this.performXXHandshake(params);
-  }
-
-  private async performXXHandshake (
-    params: HandshakeParams
-  ): Promise<XXHandshake> {
-    const { isInitiator, remoteStaticPublicKey, connection, handshakeHandler } = params;
-    const handshake = new XXHandshake(
-      isInitiator,
-      params.payload || EMPTY_BUFFER,
-      this.prologue,
-      this.crypto,
-      this.staticKeys,
-      connection,
-      handshakeHandler,
-      remoteStaticPublicKey
-    );
+    const { isInitiator, remoteStaticPublicKey, connection, handshakeHandler, payload } = params;
+    const handshake = new Handshake(isInitiator, payload || EMPTY_BUFFER, this.prologue, this.crypto, this.staticKeys, connection, this.handshake, handshakeHandler, remoteStaticPublicKey);
 
     try {
-      await handshake.propose();
-      await handshake.exchange();
-      await handshake.finish();
+      await handshake.doHandshake();
       this.metrics?.xxHandshakeSuccesses.increment();
-    } catch (e: unknown) {
+    } catch (e) {
       this.metrics?.xxHandshakeErrors.increment();
       if (e instanceof Error) {
         e.message = `Error occurred during XX handshake: ${e.message}`;
-        throw e;
       }
+      throw e;
     }
 
     return handshake;

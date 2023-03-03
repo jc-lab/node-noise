@@ -6,6 +6,8 @@ import type { CipherState, MessageBuffer, SymmetricState } from '../@types/hands
 import type { ICryptoInterface } from '../crypto';
 import { logger } from '../logger';
 import { Nonce } from '../nonce';
+import {KeyPair} from '../@types/keypair';
+import {NoiseSession} from '../@types/handshake';
 
 export abstract class AbstractHandshake {
   public crypto: ICryptoInterface
@@ -13,6 +15,8 @@ export abstract class AbstractHandshake {
   constructor (crypto: ICryptoInterface) {
     this.crypto = crypto;
   }
+
+  public abstract initSession (initiator: boolean, prologue: bytes32, s: KeyPair): NoiseSession;
 
   public encryptWithAd (cs: CipherState, ad: Uint8Array, plaintext: Uint8Array): bytes {
     const e = this.encrypt(cs.k, cs.n, ad, plaintext);
@@ -148,7 +152,7 @@ export abstract class AbstractHandshake {
     }
   }
 
-  protected split (ss: SymmetricState): {cs1: CipherState, cs2: CipherState} {
+  public split (ss: SymmetricState): {cs1: CipherState, cs2: CipherState} {
     const [tempk1, tempk2] = this.crypto.getHKDF(ss.ck, new Uint8Array(0));
     const cs1 = this.initializeKey(tempk1);
     const cs2 = this.initializeKey(tempk2);

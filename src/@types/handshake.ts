@@ -26,10 +26,16 @@ export interface SymmetricState {
 export interface HandshakeState {
   ss: SymmetricState
   s: KeyPair
-  e?: KeyPair
-  rs: bytes32
-  re: bytes32
+  e: KeyPair | null
+  rs: bytes32 | null
+  re: bytes32 | null
   psk: bytes32
+}
+
+export enum Action {
+  READ_MESSAGE,
+  WRITE_MESSAGE,
+  SPLIT
 }
 
 export interface NoiseSession {
@@ -39,6 +45,9 @@ export interface NoiseSession {
   cs2?: CipherState
   mc: uint64
   i: boolean
+
+  action: Action
+  patternIndex: number
 }
 
 export interface INoisePayload {
