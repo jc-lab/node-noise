@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es5",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "outDir": "lib"
+  },
+  "files": [
+    "node_modules/jest-expect-message/types/index.d.ts",
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ]
+}
