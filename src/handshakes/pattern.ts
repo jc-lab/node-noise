@@ -99,7 +99,7 @@ export const PATTERNS: Readonly<Record<string, Pattern>> = Object.freeze({
       PatternToken.E,
       PatternToken.EE,
       PatternToken.S,
-      PatternToken.E
+      PatternToken.ES
     ]
   },
   'XN': {
