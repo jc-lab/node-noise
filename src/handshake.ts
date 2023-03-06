@@ -43,16 +43,12 @@ export class Handshake implements IHandshake {
     this.remotePublicKey = remotePublicKey || null;
     this.handshakeHandler = handshakeHandler || null;
     this.handshake = handshake;
-    this.session = handshake.initSession(this.isInitiator, this.prologue, this.staticKeypair);
+    this.session = handshake.initSession(this.isInitiator, this.prologue, this.staticKeypair, remotePublicKey || null);
     this.metrics = metrics || null;
   }
 
   async doHandshake(): Promise<void> {
     const handshakeHandler = this.handshakeHandler;
-
-    if (this.handshake.pattern.flags & PatternFlag.FLAG_REMOTE_REQUIRED) {
-      this.session.hs.rs = this.remotePublicKey;
-    }
 
     while (true) {
       if (this.session.action === Action.READ_MESSAGE) {

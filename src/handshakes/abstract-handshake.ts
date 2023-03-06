@@ -16,7 +16,7 @@ export abstract class AbstractHandshake {
     this.crypto = crypto;
   }
 
-  public abstract initSession (initiator: boolean, prologue: bytes32, s: KeyPair): NoiseSession;
+  public abstract initSession (initiator: boolean, prologue: bytes32, s: KeyPair, remotePublicKey: bytes | null): NoiseSession;
 
   public encryptWithAd (cs: CipherState, ad: Uint8Array, plaintext: Uint8Array): bytes {
     const e = this.encrypt(cs.k, cs.n, ad, plaintext);

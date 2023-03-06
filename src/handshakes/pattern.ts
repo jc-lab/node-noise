@@ -34,6 +34,16 @@ export enum PatternFlag {
   FLAG_REMOTE_HYBRID_REQ = 0x2000,
 }
 
+enum Requirement {
+  LOCAL_REQUIRED = 0x01,
+  REMOTE_REQUIRED = 0x02,
+  PSK_REQUIRED = 0x04,
+  FALLBACK_PREMSG = 0x08,
+  LOCAL_PREMSG = 0x10,
+  REMOTE_PREMSG = 0x20,
+  FALLBACK_POSSIBLE = 0x40,
+}
+
 export interface Pattern {
   flags: PatternFlag;
   steps: PatternToken[];
@@ -187,16 +197,86 @@ export const PATTERNS: Readonly<Record<string, Pattern>> = Object.freeze({
   // }
 });
 
+function reverseFlags(flags: number): number {
+  return (((flags >> 8) & 0x00FF) | ((flags << 8) & 0xFF00)) & 0xffff;
+}
+
+function computeRequirements(flags: number, isFallback: boolean): Requirement {
+  let requirements = 0;
+
+  if ((flags & PatternFlag.FLAG_LOCAL_STATIC) != 0) {
+    requirements |= Requirement.LOCAL_REQUIRED;
+  }
+  if ((flags & PatternFlag.FLAG_LOCAL_REQUIRED) != 0) {
+    requirements |= Requirement.LOCAL_REQUIRED;
+    requirements |= Requirement.LOCAL_PREMSG;
+  }
+  if ((flags & PatternFlag.FLAG_REMOTE_REQUIRED) != 0) {
+    requirements |= Requirement.REMOTE_REQUIRED;
+    requirements |= Requirement.REMOTE_PREMSG;
+  }
+  if ((flags & (PatternFlag.FLAG_REMOTE_EPHEM_REQ | PatternFlag.FLAG_LOCAL_EPHEM_REQ)) != 0) {
+    if (isFallback)
+      requirements |= Requirement.FALLBACK_PREMSG;
+  }
+  // if (prefix.equals("NoisePSK")) {
+  //   requirements |= Requirement.PSK_REQUIRED;
+  // }
+  return requirements;
+}
+
 export class PatternHandshake extends AbstractHandshake {
   constructor(crypto: ICryptoInterface, public readonly name: string, public readonly pattern: Pattern) {
     super(crypto);
   }
 
-  initSession(initiator: boolean, prologue: bytes32, s: KeyPair): NoiseSession {
+  initSession(initiator: boolean, prologue: bytes32, s: KeyPair, remotePublicKey: bytes | null): NoiseSession {
     const ss = this.initializeSymmetric(this.name);
     this.mixHash(ss, prologue);
 
     const hs: HandshakeState = { ss, s, rs: null, psk: null, re: null, e: null };
+
+    const flags = initiator ? this.pattern.flags : reverseFlags(this.pattern.flags);
+    const requirements = computeRequirements(flags, false);
+
+    // const psk: Uint8Array | null = null;
+    // if (psk && psk.length > 0) {
+    //   // mixPreSharedKey
+    // }
+
+    if (this.pattern.flags & PatternFlag.FLAG_REMOTE_REQUIRED) {
+      hs.rs = remotePublicKey;
+    }
+
+    if (initiator) {
+      if ((requirements & Requirement.LOCAL_PREMSG) != 0) {
+        this.mixHash(ss, s.publicKey);
+      }
+      // if ((requirements & Requirement.FALLBACK_PREMSG) != 0) {
+      //   this.mixHash(ss, remoteEphemeral);
+      //   if (remoteHybrid != null)
+      //     this.mixHash(ss, remoteHybrid);
+      //   if (preSharedKey != null)
+      //     symmetric.mixPublicKeyIntoCK(remoteEphemeral);
+      // }
+      if ((requirements & Requirement.REMOTE_PREMSG) != 0) {
+        this.mixHash(ss, hs.rs!);
+      }
+    } else {
+      if ((requirements & Requirement.REMOTE_PREMSG) != 0) {
+        this.mixHash(ss, hs.rs!);
+      }
+      // if ((requirements & Requirement.FALLBACK_PREMSG) != 0) {
+      //   this.mixHash(ss, localEphemeral);
+      //   if (localHybrid != null)
+      //     this.mixHash(ss, localHybrid);
+      //   if (preSharedKey != null)
+      //     symmetric.mixPublicKeyIntoCK(localEphemeral);
+      // }
+      if ((requirements & Requirement.LOCAL_PREMSG) != 0) {
+        this.mixHash(ss, s.publicKey);
+      }
+    }
 
     return {
       hs,
