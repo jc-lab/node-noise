@@ -8,10 +8,14 @@
     "declaration": true,
     "esModuleInterop": true,
     "strict": true,
-    "outDir": "lib"
+    "outDir": "lib",
+    "rootDir": "src"
   },
   "files": [
-    "node_modules/jest-expect-message/types/index.d.ts",
+    "node_modules/jest-expect-message/types/index.d.ts"
+  ],
+  "include": [
+    "src"
   ],
   "exclude": [
     "node_modules",
