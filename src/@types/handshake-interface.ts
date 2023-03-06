@@ -9,4 +9,7 @@ export interface IHandshake {
   getRemoteStaticKey: () => bytes
 }
 
-export type HandshakeHandler = (session: NoiseSession, payload: Uint8Array) => Promise<boolean>;
+export interface HandshakeHandler {
+  beforeWriteMessage: (session: NoiseSession) => Promise<Uint8Array | null>;
+  onReadMessage: (session: NoiseSession, payload: Uint8Array) => Promise<boolean>;
+}

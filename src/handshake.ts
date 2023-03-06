@@ -8,6 +8,8 @@ import {InvalidCryptoExchangeError} from './errors';
 import {PatternFlag, PatternHandshake} from './handshakes/pattern';
 import {Metrics} from './@types/metrics';
 
+const EMPTY_BUFFER = new Uint8Array(0);
+
 export class Handshake implements IHandshake {
   public isInitiator: boolean
   public session: NoiseSession
@@ -15,7 +17,6 @@ export class Handshake implements IHandshake {
 
   private remotePublicKey: bytes | null;
 
-  protected payload: bytes
   protected connection: PbStream
   protected handshake: PatternHandshake
   protected staticKeypair: KeyPair
@@ -26,7 +27,6 @@ export class Handshake implements IHandshake {
 
   constructor(
     isInitiator: boolean,
-    payload: bytes,
     prologue: bytes32,
     crypto: ICryptoInterface,
     staticKeypair: KeyPair,
@@ -37,7 +37,6 @@ export class Handshake implements IHandshake {
     metrics?: Metrics | null
   ) {
     this.isInitiator = isInitiator;
-    this.payload = payload;
     this.prologue = prologue;
     this.staticKeypair = staticKeypair;
     this.connection = connection;
@@ -49,6 +48,8 @@ export class Handshake implements IHandshake {
   }
 
   async doHandshake(): Promise<void> {
+    const handshakeHandler = this.handshakeHandler;
+
     if (this.handshake.pattern.flags & PatternFlag.FLAG_REMOTE_REQUIRED) {
       this.session.hs.rs = this.remotePublicKey;
     }
@@ -65,14 +66,21 @@ export class Handshake implements IHandshake {
           this.remotePublicKey = this.session.hs.rs;
         }
 
-        if (this.handshakeHandler) {
-          const res = await this.handshakeHandler(this.session, payload);
+        if (handshakeHandler && handshakeHandler.onReadMessage) {
+          const res = await handshakeHandler.onReadMessage(this.session, payload);
           if (!res) {
             throw new Error('handshake rejected');
           }
         }
       } else if (this.session.action === Action.WRITE_MESSAGE) {
-        const messages = this.handshake.writeMessage(this.session, this.payload);
+        let payload: Uint8Array = EMPTY_BUFFER;
+        if (handshakeHandler && handshakeHandler.beforeWriteMessage) {
+          const temp = await handshakeHandler.beforeWriteMessage(this.session);
+          if (temp) {
+            payload = temp;
+          }
+        }
+        const messages = this.handshake.writeMessage(this.session, payload);
         this.connection.writeLP(messages.slice());
       } else if (this.session.action === Action.SPLIT) {
         const { cs1, cs2 } = this.handshake.split(this.session.hs.ss);

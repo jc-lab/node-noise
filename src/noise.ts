@@ -13,13 +13,11 @@ import {LengthPrefixedDecoder} from './length-prefixed-decoder';
 import {PatternHandshake, PATTERNS} from './handshakes/pattern';
 import {Handshake} from './handshake';
 
-const EMPTY_BUFFER = new Uint8Array(0);
 
 export interface HandshakeParams {
   connection: PbStream
   isInitiator: boolean
   remoteStaticPublicKey?: Uint8Array
-  payload?: Uint8Array
   handshakeHandler?: HandshakeHandler
 }
 
@@ -179,8 +177,8 @@ export class Noise {
    * @param {HandshakeParams} params
    */
   private async performHandshake (params: HandshakeParams): Promise<IHandshake> {
-    const { isInitiator, remoteStaticPublicKey, connection, handshakeHandler, payload } = params;
-    const handshake = new Handshake(isInitiator, payload || EMPTY_BUFFER, this.prologue, this.crypto, this.staticKeys, connection, this.handshake, handshakeHandler, remoteStaticPublicKey);
+    const { isInitiator, remoteStaticPublicKey, connection, handshakeHandler } = params;
+    const handshake = new Handshake(isInitiator, this.prologue, this.crypto, this.staticKeys, connection, this.handshake, handshakeHandler, remoteStaticPublicKey);
 
     try {
       await handshake.doHandshake();

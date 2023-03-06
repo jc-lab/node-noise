@@ -21,11 +21,9 @@ for (const patternName of patterns) {
         const staticKeysInitiator = stablelib.generateX25519KeyPair();
         const staticKeysResponder = stablelib.generateX25519KeyPair();
 
-        const initPayload = Buffer.from('aaaa', 'ascii');
-        const handshakeInitator = new Handshake(true, initPayload, prologue, stablelib, staticKeysInitiator, connectionFrom, xx, null, staticKeysResponder.publicKey);
+        const handshakeInitator = new Handshake(true, prologue, stablelib, staticKeysInitiator, connectionFrom, xx, null, staticKeysResponder.publicKey);
 
-        const respPayload = Buffer.from('bbbb', 'ascii');
-        const handshakeResponder = new Handshake(false, respPayload, prologue, stablelib, staticKeysResponder, connectionTo, xx, null, staticKeysInitiator.publicKey);
+        const handshakeResponder = new Handshake(false, prologue, stablelib, staticKeysResponder, connectionTo, xx, null, staticKeysInitiator.publicKey);
 
         await Promise.all([handshakeInitator.doHandshake(), handshakeResponder.doHandshake()]);
 
@@ -62,11 +60,9 @@ for (const patternName of patterns) {
           const staticKeysInitiator = stablelib.generateX25519KeyPair();
           const staticKeysResponder = stablelib.generateX25519KeyPair();
 
-          const initPayload = Buffer.from('aaaa', 'ascii');
-          const handshakeInitator = new Handshake(true, initPayload, prologue, stablelib, staticKeysInitiator, connectionFrom, xx, null, fakeStaticKey.publicKey);
+          const handshakeInitator = new Handshake(true, prologue, stablelib, staticKeysInitiator, connectionFrom, xx, null, fakeStaticKey.publicKey);
 
-          const respPayload = Buffer.from('bbbb', 'ascii');
-          const handshakeResponder = new Handshake(false, respPayload, prologue, stablelib, staticKeysResponder, connectionTo, xx, null, staticKeysInitiator.publicKey);
+          const handshakeResponder = new Handshake(false, prologue, stablelib, staticKeysResponder, connectionTo, xx, null, staticKeysInitiator.publicKey);
 
           await Promise.all([handshakeInitator.doHandshake(), handshakeResponder.doHandshake()]);
 
@@ -90,11 +86,9 @@ for (const patternName of patterns) {
           const staticKeysInitiator = stablelib.generateX25519KeyPair();
           const staticKeysResponder = stablelib.generateX25519KeyPair();
 
-          const initPayload = Buffer.from('aaaa', 'ascii');
-          const handshakeInitator = new Handshake(true, initPayload, prologue, stablelib, staticKeysInitiator, connectionFrom, xx, null, staticKeysResponder.publicKey);
+          const handshakeInitator = new Handshake(true, prologue, stablelib, staticKeysInitiator, connectionFrom, xx, null, staticKeysResponder.publicKey);
 
-          const respPayload = Buffer.from('bbbb', 'ascii');
-          const handshakeResponder = new Handshake(false, respPayload, prologue, stablelib, staticKeysResponder, connectionTo, xx, null, fakeStaticKey.publicKey);
+          const handshakeResponder = new Handshake(false, prologue, stablelib, staticKeysResponder, connectionTo, xx, null, fakeStaticKey.publicKey);
 
           await Promise.all([handshakeInitator.doHandshake(), handshakeResponder.doHandshake()]);
 
