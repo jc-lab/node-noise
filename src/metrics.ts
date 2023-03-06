@@ -4,12 +4,12 @@ export type MetricsRegistry = ReturnType<typeof registerMetrics>
 
 export function registerMetrics (metrics: Metrics) {
   return {
-    xxHandshakeSuccesses: metrics.registerCounter(
+    handshakeSuccesses: metrics.registerCounter(
       'libp2p_noise_xxhandshake_successes_total', {
         help: 'Total count of noise xxHandshakes successes_'
       }),
 
-    xxHandshakeErrors: metrics.registerCounter(
+    handshakeErrors: metrics.registerCounter(
       'libp2p_noise_xxhandshake_error_total', {
         help: 'Total count of noise xxHandshakes errors'
       }),

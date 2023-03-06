@@ -184,11 +184,11 @@ export class Noise {
 
     try {
       await handshake.doHandshake();
-      this.metrics?.xxHandshakeSuccesses.increment();
+      this.metrics?.handshakeSuccesses.increment();
     } catch (e) {
-      this.metrics?.xxHandshakeErrors.increment();
+      this.metrics?.handshakeErrors.increment();
       if (e instanceof Error) {
-        e.message = `Error occurred during XX handshake: ${e.message}`;
+        e.message = `Error occurred during ${this.spec.pattern} handshake: ${e.message}`;
       }
       throw e;
     }
