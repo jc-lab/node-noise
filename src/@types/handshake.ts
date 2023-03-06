@@ -29,7 +29,7 @@ export interface HandshakeState {
   e: KeyPair | null
   rs: bytes32 | null
   re: bytes32 | null
-  psk: bytes32
+  psk: bytes32 | null
 }
 
 export enum Action {

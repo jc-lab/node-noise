@@ -193,12 +193,10 @@ export class PatternHandshake extends AbstractHandshake {
   }
 
   initSession(initiator: boolean, prologue: bytes32, s: KeyPair): NoiseSession {
-    const psk = this.createEmptyKey();
-
     const ss = this.initializeSymmetric(this.name);
     this.mixHash(ss, prologue);
 
-    const hs: HandshakeState = { ss, s, rs: null, psk, re: null, e: null };
+    const hs: HandshakeState = { ss, s, rs: null, psk: null, re: null, e: null };
 
     return {
       hs,
