@@ -19,6 +19,7 @@ export interface HandshakeParams {
   isInitiator: boolean
   remoteStaticPublicKey?: Uint8Array
   handshakeHandler?: HandshakeHandler
+  noLengthCodec?: boolean;
 }
 
 export interface SecuredConnection {
@@ -114,7 +115,7 @@ export class Noise {
 
   public async secureConnection(parameters: HandshakeParams): Promise<SecuredConnection> {
     const handshake = await this.performHandshake(parameters);
-    const conn = await this.createSecureConnection(parameters.connection, handshake);
+    const conn = await this.createSecureConnection(parameters.connection, handshake, parameters.noLengthCodec || false);
 
     return {
       conn,
@@ -196,7 +197,8 @@ export class Noise {
 
   private createSecureConnection (
     connection: PbStream,
-    handshake: IHandshake
+    handshake: IHandshake,
+    noLengthCodec: boolean
   ): streams.Duplex {
     // Create encryption box/unbox wrapper
     const network = connection.unwrap();
@@ -205,11 +207,13 @@ export class Noise {
     const userInbound = new streams.PassThrough();
     const userStream = new duplexify(userOutbound, userInbound);
 
-    userOutbound
-      .pipe(encryptStream(handshake, this.metrics))
-      .pipe(network)
-      .pipe(new LengthPrefixedDecoder())
-      .pipe(decryptStream(handshake, this.metrics))
+    let s = userOutbound
+      .pipe(encryptStream(handshake, this.metrics, noLengthCodec))
+      .pipe(network);
+    if (!noLengthCodec) {
+      s = s.pipe(new LengthPrefixedDecoder());
+    }
+    s.pipe(decryptStream(handshake, this.metrics))
       .pipe(userInbound);
 
     return userStream;

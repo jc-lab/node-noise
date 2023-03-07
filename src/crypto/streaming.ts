@@ -6,7 +6,7 @@ import { NOISE_MSG_MAX_LENGTH_BYTES, NOISE_MSG_MAX_LENGTH_BYTES_WITHOUT_TAG } fr
 import { uint16BEEncode } from '../encoder';
 
 // Returns generator that encrypts payload from the user
-export function encryptStream (handshake: IHandshake, metrics?: MetricsRegistry): streams.Duplex {
+export function encryptStream (handshake: IHandshake, metrics?: MetricsRegistry, noLengthCodec?: boolean): streams.Duplex {
   let nextWrite: Function | null = null;
 
   return new streams.Transform({
@@ -30,8 +30,10 @@ export function encryptStream (handshake: IHandshake, metrics?: MetricsRegistry)
           const data = Buffer.from(handshake.encrypt(chunk.subarray(i, end), handshake.session));
           metrics?.encryptedPackets.increment();
 
-          const encodedLength = uint16BEEncode(data.byteLength);
-          this.push(encodedLength);
+          if (!noLengthCodec) {
+            const encodedLength = uint16BEEncode(data.byteLength);
+            this.push(encodedLength);
+          }
           i += NOISE_MSG_MAX_LENGTH_BYTES_WITHOUT_TAG;
           if (this.push(data)) {
             setImmediate(next);
