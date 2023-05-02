@@ -4,6 +4,10 @@ import type { IHandshake } from '../@types/handshake-interface';
 import type { MetricsRegistry } from '../metrics';
 import { uint16BEEncode } from '../encoder';
 
+const doImmediate = (typeof setImmediate !== 'undefined') ? setImmediate : (fn: any) => {
+  setTimeout(fn, 0);
+};
+
 // Returns generator that encrypts payload from the user
 export function encryptStream (handshake: IHandshake, metrics?: MetricsRegistry, noLengthCodec?: boolean, noiseMsgMaxLengthBytes?: number): streams.Duplex {
   const maxLengthBytes = noiseMsgMaxLengthBytes || -1;
@@ -41,7 +45,7 @@ export function encryptStream (handshake: IHandshake, metrics?: MetricsRegistry,
           }
           i += plaintext.length;
           if (this.push(data)) {
-            setImmediate(next);
+            doImmediate(next);
           } else {
             if (nextWrite) {
               callback(new Error('illegal write'));
@@ -106,7 +110,7 @@ export function decryptStream (handshake: IHandshake, metrics?: MetricsRegistry,
           }
           metrics?.decryptedPackets.increment();
           if (this.push(decrypted)) {
-            setImmediate(next);
+            doImmediate(next);
           } else {
             if (nextWrite) {
               callback(new Error('illegal write'));
