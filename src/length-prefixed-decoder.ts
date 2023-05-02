@@ -1,20 +1,16 @@
 import * as streams from 'stream';
 import { Uint8ArrayList } from './uint8arraylist';
 import { uint16BEDecode } from './encoder';
-import {NOISE_MSG_MAX_LENGTH_BYTES} from './constants';
 
 export class LengthPrefixedDecoder extends streams.Duplex {
   private readonly receiveBuffer = new Uint8ArrayList();
-  private readonly maxLength: number;
   private nextWrite: Function | null = null;
 
-  constructor(options?: streams.DuplexOptions & { maxLength?: number }) {
+  constructor(options?: streams.DuplexOptions) {
     super({
       autoDestroy: true,
       ...options
     });
-
-    this.maxLength = options?.maxLength || NOISE_MSG_MAX_LENGTH_BYTES;
   }
 
   _read(size: number) {

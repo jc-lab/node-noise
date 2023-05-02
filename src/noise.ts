@@ -20,6 +20,7 @@ export interface HandshakeParams {
   remoteStaticPublicKey?: Uint8Array
   handshakeHandler?: HandshakeHandler
   noLengthCodec?: boolean;
+  noiseMsgMaxLengthBytes?: number;
 }
 
 export interface SecuredConnection {
@@ -115,7 +116,7 @@ export class Noise {
 
   public async secureConnection(parameters: HandshakeParams): Promise<SecuredConnection> {
     const handshake = await this.performHandshake(parameters);
-    const conn = await this.createSecureConnection(parameters.connection, handshake, parameters.noLengthCodec || false);
+    const conn = await this.createSecureConnection(parameters.connection, handshake, parameters.noLengthCodec || false, parameters.noiseMsgMaxLengthBytes || -1);
 
     return {
       conn,
@@ -198,7 +199,8 @@ export class Noise {
   private createSecureConnection (
     connection: PbStream,
     handshake: IHandshake,
-    noLengthCodec: boolean
+    noLengthCodec: boolean,
+    noiseMsgMaxLengthBytes: number,
   ): streams.Duplex {
     // Create encryption box/unbox wrapper
     const network = connection.unwrap();
@@ -208,12 +210,12 @@ export class Noise {
     const userStream = new duplexify(userOutbound, userInbound);
 
     let s = userOutbound
-      .pipe(encryptStream(handshake, this.metrics, noLengthCodec))
+      .pipe(encryptStream(handshake, this.metrics, noLengthCodec, noiseMsgMaxLengthBytes))
       .pipe(network);
     if (!noLengthCodec) {
       s = s.pipe(new LengthPrefixedDecoder());
     }
-    s.pipe(decryptStream(handshake, this.metrics))
+    s.pipe(decryptStream(handshake, this.metrics, noiseMsgMaxLengthBytes))
       .pipe(userInbound);
 
     return userStream;

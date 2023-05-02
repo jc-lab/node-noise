@@ -1,7 +1,6 @@
 import * as streams from 'stream';
 import { Uint8ArrayList } from './uint8arraylist';
 import { uint16BEEncode, uint16BEDecode } from './encoder';
-import {NOISE_MSG_MAX_LENGTH_BYTES} from './constants';
 import duplexify from 'duplexify';
 
 interface RingItem<D> {
@@ -63,20 +62,17 @@ type CallbackType = (error?: (Error | null)) => void;
 export class PbStreamImpl extends streams.Duplex implements PbStream {
   private readonly ringBuffer = new RingBuffer();
   private readonly receiveBuffer = new Uint8ArrayList();
-  private readonly maxLength: number;
   private unwrapped: duplexify.Duplexify | null = null;
   private unwrappedOutbound: streams.Writable | null = null;
   private unwrappedInbound: streams.PassThrough | null = null;
 
   private nextWrite: CallbackType | null = null;
 
-  constructor(options?: streams.DuplexOptions & { maxLength?: number }) {
+  constructor(options?: streams.DuplexOptions) {
     super({
       autoDestroy: true,
       ...options
     });
-
-    this.maxLength = options?.maxLength || NOISE_MSG_MAX_LENGTH_BYTES;
   }
 
   writeLP(input: Uint8Array): void {
